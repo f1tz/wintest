@@ -1,0 +1,42 @@
+name: VPS
+
+
+on: [push, workflow_dispatch]
+
+
+jobs:
+
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+
+    - name: Download
+
+      run: Invoke-WebRequest https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
+
+    - name: Install
+
+      run: .\cloudflared.exe service install $Env:INSTALL_TOKEN
+
+      env:
+      
+        INSTALL_TOKEN: ${{ secrets.INSTALL_TOKEN }}
+
+    - name: EnableRDP
+
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText $Env:USER_PASS -Force)
+
+      env:
+    
+        USER_PASS: ${{ secrets.USER_PASS }}
+
+      
+    - name: KeepRunning
+
+      run: do {$n=Read-Host; Start-Sleep -Seconds 60 } while( $n -ne 0)
